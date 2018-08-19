@@ -1,1 +1,1 @@
-python main.py zelda_test.nes
+python main.py nestest.nes

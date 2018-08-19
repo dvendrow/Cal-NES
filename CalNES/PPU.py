@@ -1,85 +1,93 @@
 """
-Major credit to fogleman/nes
-I wouldn't even be close to understanding the PPU otherwise
+This is pretty much fogleman/nes's PPU
+I'm working on understanding it + re-implementing it
 """
-
 from .Screen import Screen
 import random
 import pygame
 
 
 class PPU:
-    nes = None
-    mem = None
-    cycle = 0 # 0-340
-    scanline = 0 # 0-261, 0-239=visible, 240=post, 241-260=vblank, 261=pre
-    frame = 0 # frame counter
+    __slots__ = ['nes', 'mem', 'cycle', 'scanline', 'frame',
+                 'paletteData', 'nameTableData', 'oamData', 'front',
+                 'back', 'v', 't', 'x', 'w', 'f', 'register',
+                 'nmiOccurred', 'nmiOutput', 'nmiPrevious', 'nmiDelay',
+                 'nameTableByte', 'attributeTableByte', 'lowTileByte',
+                 'highTileByte', 'tileData', 'spriteCount', 'spritePatterns',
+                 'spritePositions', 'spritePriorities', 'spriteIndexes', 'flagNameTable',
+                 'flagIncrement', 'flagSpriteTable', 'flagBackgroundTable',
+                 'flagSpriteSize', 'flagMasterSlave', 'flagGrayscale',
+                 'flagShowLeftBackground', 'flagShowLeftSprites', 'flagShowSprites',
+                 'flagRedTint', 'flagShowBackground', 'flagGreenTint',
+                 'flagBlueTint', 'flagSpriteZeroHit',
+                 'flagSpriteOverflow', 'oamAddress', 'bufferedData']
 
-    paletteData = [0] * 32
-    nameTableData = [0] * 2048
-    oamData = [0] * 256
-
-    # screens, even and odd
-    front = None
-    back = None
-
-    # PPU Registers
-    v = 0 # current vram address, 15b
-    t = 0 # temp vram address, 15b
-    x = 0 # fine x scroll 3b
-    w = 0 # write toggle 1b
-    f = 0 # even/odd frame flag 1b
-
-    register = 0 # byte? not sure what this is for
-
-    # nmi flags, what is this lol
-    nmiOccurred = False
-    nmiOutput = False
-    nmiPrevious = False
-    nmiDelay = 0 # 8b
-
-    nameTableByte = 0 #      byte
-    attributeTableByte = 0 #  byte
-    lowTileByte = 0 #        byte
-    highTileByte = 0 #      byte
-    tileData = 0 #           uint64
-
-    # sprite temporary variables
-    spriteCount = 0 #      int
-    spritePatterns = [0] * 8 #   [8]uint32
-    spritePositions = [0] * 8 # [8]byte
-    spritePriorities = [0] * 8# [8]byte
-    spriteIndexes = [0] * 8 #    [8]byte
-
-    # $2000 PPUCTRL
-    flagNameTable = 0 #       byte // 0: $2000; 1: $2400; 2: $2800; 3: $2C00
-    flagIncrement = 0 #      byte // 0: add 1; 1: add 32
-    flagSpriteTable = 0 #     byte // 0: $0000; 1: $1000; ignored in 8x16 mode
-    flagBackgroundTable = 0 # byte // 0: $0000; 1: $1000
-    flagSpriteSize = 0 #      byte // 0: 8x8; 1: 8x16
-    flagMasterSlave = 0 #    byte // 0: read EXT; 1: write EXT
-
-    # $2001 PPUMASK
-    flagGrayscale = 0 #          byte // 0: color; 1: grayscale
-    flagShowLeftBackground = 0# byte // 0: hide; 1: show
-    flagShowLeftSprites = 0 #    byte // 0: hide; 1: show
-    flagShowBackground = 0 #    byte // 0: hide; 1: show
-    flagShowSprites = 0 #       byte // 0: hide; 1: show
-    flagRedTint = 0 #            byte // 0: normal; 1: emphasized
-    flagGreenTint = 0 #         byte // 0: normal; 1: emphasized
-    flagBlueTint = 0 #          byte // 0: normal; 1: emphasized
-
-    # $2002 PPUSTATUS
-    flagSpriteZeroHit = 0 #   byte
-    flagSpriteOverflow = 0 # byte
-
-    # $2003 OAMADDR
-    oamAddress = 0 # byte
-
-    # $2007 PPUDATA
-    bufferedData = 0 # byte // for buffered reads
 
     def __init__(self, nes, mem):
+        self.cycle = 0 # 0-340
+        self.scanline = 0 # 0-261, 0-239=visible, 240=post, 241-260=vblank, 261=pre
+        self.frame = 0 # frame counter
+
+        self.paletteData = [0] * 32
+        self.nameTableData = [0] * 2048
+        self.oamData = [0] * 256
+
+        # PPU Registers
+        self.v = 0 # current vram address, 15b
+        self.t = 0 # temp vram address, 15b
+        self.x = 0 # fine x scroll 3b
+        self.w = 0 # write toggle 1b
+        self.f = 0 # even/odd frame flag 1b
+
+        self.register = 0 # byte? not sure what this is for
+
+        # nmi flags, what is this lol
+        self.nmiOccurred = False
+        self.nmiOutput = False
+        self.nmiPrevious = False
+        self.nmiDelay = 0 # 8b
+
+        self.nameTableByte = 0 #      byte
+        self.attributeTableByte = 0 #  byte
+        self.lowTileByte = 0 #        byte
+        self.highTileByte = 0 #      byte
+        self.tileData = 0 #           uint64
+
+        # sprite temporary variables
+        self.spriteCount = 0 #      int
+        self.spritePatterns = [0] * 8 #   [8]uint32
+        self.spritePositions = [0] * 8 # [8]byte
+        self.spritePriorities = [0] * 8# [8]byte
+        self.spriteIndexes = [0] * 8 #    [8]byte
+
+        # $2000 PPUCTRL
+        self.flagNameTable = 0 #       byte // 0: $2000; 1: $2400; 2: $2800; 3: $2C00
+        self.flagIncrement = 0 #      byte // 0: add 1; 1: add 32
+        self.flagSpriteTable = 0 #     byte // 0: $0000; 1: $1000; ignored in 8x16 mode
+        self.flagBackgroundTable = 0 # byte // 0: $0000; 1: $1000
+        self.flagSpriteSize = 0 #      byte // 0: 8x8; 1: 8x16
+        self.flagMasterSlave = 0 #    byte // 0: read EXT; 1: write EXT
+
+        # $2001 PPUMASK
+        self.flagGrayscale = 0 #          byte // 0: color; 1: grayscale
+        self.flagShowLeftBackground = 0# byte // 0: hide; 1: show
+        self.flagShowLeftSprites = 0 #    byte // 0: hide; 1: show
+        self.flagShowBackground = 0 #    byte // 0: hide; 1: show
+        self.flagShowSprites = 0 #       byte // 0: hide; 1: show
+        self.flagRedTint = 0 #            byte // 0: normal; 1: emphasized
+        self.flagGreenTint = 0 #         byte // 0: normal; 1: emphasized
+        self.flagBlueTint = 0 #          byte // 0: normal; 1: emphasized
+
+        # $2002 PPUSTATUS
+        self.flagSpriteZeroHit = 0 #   byte
+        self.flagSpriteOverflow = 0 # byte
+
+        # $2003 OAMADDR
+        self.oamAddress = 0 # byte
+
+        # $2007 PPUDATA
+        self.bufferedData = 0 # byte // for buffered reads
+
         self.nes = nes
         self.mem = mem
         self.back = Screen()
@@ -104,7 +112,7 @@ class PPU:
             address -= 16
         self.paletteData[address] = value
 
-    def readRegister(self, address):
+    def read_register(self, address):
         if address == 0x2002:
             return self.readStatus()
         if address == 0x2004:
@@ -114,7 +122,7 @@ class PPU:
         return 0
 
     # consider rewriting this with hashing
-    def writeRegister(self, address, value):
+    def write_register(self, address, value):
         value = value & 0xFF
         self.register = value
         if address == 0x2000:
@@ -166,7 +174,7 @@ class PPU:
         self.nmiChange()
         self.w = 0
         return result & 0xFF
-        
+
     def writeOAMAddress(self, oam):
         self.oamAddress = oam
 
@@ -256,8 +264,8 @@ class PPU:
         self.v = (self.v & 0xFBE0) | (self.t & 0x041F)
 
     def copyY(self):
-        self.v = (self.v & 0x841F) | (self.t & 0x7BE0)    
-        
+        self.v = (self.v & 0x841F) | (self.t & 0x7BE0)
+
     def nmiChange(self):
         nmi = self.nmiOutput and self.nmiOccurred
         if nmi and not self.nmiPrevious:
@@ -317,7 +325,7 @@ class PPU:
             return 0
         # TODO: wtf
         data = self.fetchTileData()
-        data >>= ((7 - self.x) * 4) 
+        data >>= ((7 - self.x) * 4)
         return data & 0x0F
 
     def spritePixel(self):
@@ -511,4 +519,4 @@ for i, c in enumerate(colors):
     g = (c >> 8) & 0xFF
     b = c & 0xFF
     Palette[i] = pygame.Color(r, g, b, 255)
-    
+

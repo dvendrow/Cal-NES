@@ -1,5 +1,5 @@
 # Cal-NES
-An NES Emulator created during Calhacks 4.0
+An NES Emulator started during Calhacks 4.0 that I continued on my own. 
 
 ![WIP](screenshot.png?raw=true "Wow this looks bad haha")
 
@@ -9,12 +9,4 @@ An NES Emulator created during Calhacks 4.0
 - PPU Emulation
 - Base Mappers
 
-# Team Members
-
-Michelle Cheung
-
-Stephen Jayakar
-
-David Vendrow
-
-Alex Yang
+[Original Repo](https://github.com/dvendrow/Cal-NES)

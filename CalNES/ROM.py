@@ -34,7 +34,7 @@ class ROM:
 
             # First three bytes must say b'NES'
             if self.header[0:3] != FILE_TYPE:
-                raise 
+                raise Exception("invalid NES header")
             
             # Number of 16384 byte program ROM pages
             self.prg_rom_size = self.header[4]
@@ -49,7 +49,7 @@ class ROM:
             self.flags7 = self.header[7]
 
             # setting values from flags6 and 7
-            self.mapper = (self.flags7 & 0xF0) | ((self.flags6 & 0xF0) >> 4)
+            self.mapper = (self.flags7 & 0xF0) | (self.flags6 >> 4)
             self.four_screen = bool(self.flags6 & 0b1000 >> 3)
             self.trainer = bool(self.flags6 & 0b0100 >> 2)
             self.battery = bool(self.flags6 & 0b0010 >> 1)

@@ -1,3 +1,5 @@
+.vscode
+*.pyc
 *.nes
 .DS_Store
 .idea
@@ -9,4 +11,7 @@ temp
 *.deb
 *.cdl
 *.go
+*.s
+*.txt
+instr_test-v5/
 nes-debug/

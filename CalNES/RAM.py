@@ -21,7 +21,7 @@ class cpuMEM:
             # read controller 2
             return 0
         elif address >= 0x6000:
-            return self.nes.mapper.read_byte(address)
+            return self.nes.mmap.read(address)
         else:
             print("bad cpu read at " + str(address))
             input()
@@ -50,7 +50,7 @@ class cpuMEM:
             # io registers
             print("io registers")
         elif address >= 0x6000:
-            self.nes.mapper.write_byte(address, value)
+            self.nes.mmap.write(address, value)
         else:
             print("invalid cpu write to memory")
 
@@ -64,7 +64,7 @@ class ppuMEM:
     def read_byte(self, address):
         address = address % 0x4000
         if address < 0x2000:
-            return self.nes.mapper.read_byte(address)
+            return self.nes.mmap.read(address)
         elif address < 0x3F00:
             # mirror
             mode = self.nes.rom.mirroring
@@ -78,7 +78,7 @@ class ppuMEM:
     def write_byte(self, address, value):
         address = address % 0x4000
         if address < 0x2000:
-            self.nes.mapper.write_byte(address, value)
+            self.nes.mmap.write(address, value)
         elif address < 0x3f00:
             mode = self.nes.rom.mirroring
             self.nes.ppu.nameTableData[mirror_address(mode, address) % 2048] = value
